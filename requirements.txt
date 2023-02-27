@@ -1,0 +1,5 @@
+flask
+newspaper3k
+llama-index
+langchain
+python-dotenv
