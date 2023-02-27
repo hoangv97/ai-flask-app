@@ -92,7 +92,7 @@ def ask_gpt(
     # set maximum input size
     max_input_size = 4096
     # set number of output tokens
-    num_outputs = 256
+    num_outputs = 2056
     # set maximum chunk overlap
     max_chunk_overlap = 20
     # set chunk size limit
