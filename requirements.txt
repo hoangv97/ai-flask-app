@@ -3,3 +3,4 @@ newspaper3k
 llama-index
 langchain
 python-dotenv
+youtube-transcript-api
