@@ -3,8 +3,13 @@ from typing import List, Literal
 
 import requests
 from langchain import OpenAI
-from llama_index import (Document, GPTSimpleVectorIndex, LLMPredictor,
-                         NotionPageReader, PromptHelper)
+from llama_index import (
+    Document,
+    GPTSimpleVectorIndex,
+    LLMPredictor,
+    NotionPageReader,
+    PromptHelper,
+)
 from newspaper import Article
 
 from .youtube import get_documents as get_youtube_documents
@@ -119,33 +124,13 @@ def get_index(
     return index
 
 
-def ask_gpt_with_notion(
+def get_notion_documents(
     page_ids: List[str],
-    prompt: str,
-    response_mode: Literal["default", "compact", "tree_summarize"],
-    model_name: str,
 ):
     reader = NotionPageReader(integration_token=NOTION_API_KEY)
     documents = reader.load_data(page_ids=page_ids)
 
-    index = get_index(documents, model_name)
-
-    response = index.query(prompt + "\n", response_mode=response_mode)
-    return response.response.strip()
-
-
-def ask_gpt_with_youtube(
-    ids: List[str],
-    prompt: str,
-    response_mode: Literal["default", "compact", "tree_summarize"],
-    model_name: str,
-):
-    documents = get_youtube_documents(ids=ids, languages=['en', 'vi'])
-
-    index = get_index(documents, model_name)
-
-    response = index.query(prompt + "\n", response_mode=response_mode)
-    return response.response.strip()
+    return documents
 
 
 def handle_url(
@@ -155,29 +140,29 @@ def handle_url(
     model_name: str,
 ):
     try:
-        response_mode = "tree_summarize" if prompt_type == "summarize" else "default"
-
         video_id = get_youtube_video_id(url)
         if video_id:
-            result = ask_gpt_with_youtube([video_id], prompt, response_mode, model_name)
-            return result
-        
-        # normal URL
-        item = get_notion_item(url)
+            documents = get_youtube_documents(ids=[video_id], languages=["en", "vi"])
 
-        if not item:
-            article = Article(url)
-            article.download()
-            article.parse()
-            # article.nlp()
+        else:
+            # normal URL
+            item = get_notion_item(url)
 
-            item = create_notion_item(article)
+            if not item:
+                article = Article(url)
+                article.download()
+                article.parse()
+                # article.nlp()
 
-        result = ask_gpt_with_notion(
-            [item["id"]], prompt, response_mode, model_name
-        )
+                item = create_notion_item(article)
 
-        return result
+            documents = get_notion_documents([item["id"]])
+
+        index = get_index(documents, model_name)
+
+        response_mode = "tree_summarize" if prompt_type == "summarize" else "default"
+        response = index.query(prompt + "\n", response_mode=response_mode)
+        return response.response.strip()
     except Exception as e:
         print(e)
         return None
