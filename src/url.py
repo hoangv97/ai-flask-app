@@ -1,16 +1,14 @@
 import os
-from newspaper import Article
-import requests
-from llama_index import (
-    GPTSimpleVectorIndex,
-    LLMPredictor,
-    PromptHelper,
-    NotionPageReader,
-    Document,
-    download_loader,
-)
-from langchain import OpenAI
 from typing import List, Literal
+
+import requests
+from langchain import OpenAI
+from llama_index import (Document, GPTSimpleVectorIndex, LLMPredictor,
+                         NotionPageReader, PromptHelper)
+from newspaper import Article
+
+from .youtube import get_documents as get_youtube_documents
+from .youtube import get_youtube_video_id
 
 NOTION_API_KEY = os.getenv("NOTION_API_KEY")
 
@@ -137,15 +135,12 @@ def ask_gpt_with_notion(
 
 
 def ask_gpt_with_youtube(
-    ytlinks: List[str],
+    ids: List[str],
     prompt: str,
     response_mode: Literal["default", "compact", "tree_summarize"],
     model_name: str,
 ):
-    YoutubeTranscriptReader = download_loader("YoutubeTranscriptReader")
-
-    loader = YoutubeTranscriptReader()
-    documents = loader.load_data(ytlinks=ytlinks, languages=['en', 'vi'])
+    documents = get_youtube_documents(ids=ids, languages=['en', 'vi'])
 
     index = get_index(documents, model_name)
 
@@ -162,23 +157,25 @@ def handle_url(
     try:
         response_mode = "tree_summarize" if prompt_type == "summarize" else "default"
 
-        if url.startswith("https://www.youtube.com/watch"):
-            result = ask_gpt_with_youtube([url], prompt, response_mode, model_name)
+        video_id = get_youtube_video_id(url)
+        if video_id:
+            result = ask_gpt_with_youtube([video_id], prompt, response_mode, model_name)
+            return result
+        
+        # normal URL
+        item = get_notion_item(url)
 
-        else:
-            item = get_notion_item(url)
+        if not item:
+            article = Article(url)
+            article.download()
+            article.parse()
+            # article.nlp()
 
-            if not item:
-                article = Article(url)
-                article.download()
-                article.parse()
-                # article.nlp()
+            item = create_notion_item(article)
 
-                item = create_notion_item(article)
-
-            result = ask_gpt_with_notion(
-                [item["id"]], prompt, response_mode, model_name
-            )
+        result = ask_gpt_with_notion(
+            [item["id"]], prompt, response_mode, model_name
+        )
 
         return result
     except Exception as e:

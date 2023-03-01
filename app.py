@@ -1,5 +1,6 @@
-from flask import Flask, request
 from dotenv import load_dotenv
+from flask import Flask, request
+
 from src.url import handle_url
 
 load_dotenv()
