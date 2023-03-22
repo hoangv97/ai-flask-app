@@ -11,6 +11,7 @@ from llama_index import (
     PromptHelper,
 )
 from newspaper import Article
+from langchain.chat_models import ChatOpenAI
 
 from .youtube import get_documents as get_youtube_documents
 from .youtube import get_youtube_video_id
@@ -110,11 +111,16 @@ def get_index(
 
     # define LLM
     llm_predictor = LLMPredictor(
-        llm=OpenAI(
+        # llm=OpenAI(
+        #     temperature=0,
+        #     model_name=model_name or "gpt-3.5-turbo",
+        #     max_tokens=num_outputs,
+        #     openai_api_key=OPENAI_API_KEY,
+        # ),
+        llm=ChatOpenAI(
             temperature=0,
-            model_name=model_name or "gpt-3.5-turbo",
+            openai_api_key=OPENAI_API_KEY, 
             max_tokens=num_outputs,
-            openai_api_key=OPENAI_API_KEY,
         ),
     )
 
