@@ -112,10 +112,10 @@ def get_index(
     llm_predictor = LLMPredictor(
         llm=OpenAI(
             temperature=0,
-            model_name=model_name or "text-davinci-003",
+            model_name=model_name or "gpt-3.5-turbo",
             max_tokens=num_outputs,
             openai_api_key=OPENAI_API_KEY,
-        )
+        ),
     )
 
     index = GPTSimpleVectorIndex(
