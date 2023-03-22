@@ -4,3 +4,4 @@ llama-index
 langchain
 python-dotenv
 youtube-transcript-api
+openai
