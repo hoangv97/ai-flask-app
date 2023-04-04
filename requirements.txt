@@ -9,3 +9,7 @@ wolframalpha
 google-search-results
 wikipedia
 google-api-python-client
+transformers
+sentence_transformers
+huggingface_hub
+configparser
