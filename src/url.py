@@ -3,15 +3,10 @@ from typing import List, Literal
 
 import requests
 from langchain import OpenAI
-from llama_index import (
-    Document,
-    GPTSimpleVectorIndex,
-    LLMPredictor,
-    NotionPageReader,
-    PromptHelper,
-)
-from newspaper import Article
 from langchain.chat_models import ChatOpenAI
+from llama_index import (Document, GPTSimpleVectorIndex, LLMPredictor,
+                         NotionPageReader, PromptHelper)
+from newspaper import Article
 
 from .youtube import get_documents as get_youtube_documents
 from .youtube import get_youtube_video_id

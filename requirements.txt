@@ -5,3 +5,7 @@ langchain
 python-dotenv
 youtube-transcript-api
 openai
+wolframalpha
+google-search-results
+wikipedia
+google-api-python-client

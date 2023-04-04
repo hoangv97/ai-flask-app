@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from flask import Flask, request
 
 from src.url import handle_url
+from src.agents import handle_prompt, AVAILABLE_TOOL_NAMES, AVAILABLE_TOOLS
 
 load_dotenv()
 
@@ -30,3 +31,24 @@ def api_url():
         'url': url,
         'result': result,
     }
+    
+@app.route('/api/tools', methods=['POST', 'GET'])
+def api_tools():
+    return AVAILABLE_TOOLS
+    
+    
+@app.route('/api/ask', methods=['POST', 'GET'])
+def api_ask():
+    prompt = request.args.get('p', None)
+    if not prompt:
+        prompt = request.json.get('p', None)
+    if not prompt:
+        return 'Prompt is missing!', 400
+    
+    tools = request.args.get('t', '')
+    if not tools:
+        return 'Tools is missing! Available tools: {}'.format(', '.join(AVAILABLE_TOOL_NAMES)), 400
+    tools = tools.split(',')
+    
+    result = handle_prompt(prompt, tools)
+    return result
