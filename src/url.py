@@ -1,11 +1,18 @@
 import os
 from typing import List, Literal
+import traceback
 
 import requests
 from langchain import OpenAI
 from langchain.chat_models import ChatOpenAI
-from llama_index import (Document, GPTSimpleVectorIndex, LLMPredictor,
-                         NotionPageReader, PromptHelper)
+from llama_index import (
+    Document,
+    GPTSimpleVectorIndex,
+    LLMPredictor,
+    NotionPageReader,
+    PromptHelper,
+    ServiceContext,
+)
 from newspaper import Article
 
 from .youtube import get_documents as get_youtube_documents
@@ -114,13 +121,17 @@ def get_index(
         # ),
         llm=ChatOpenAI(
             temperature=0,
-            openai_api_key=OPENAI_API_KEY, 
+            openai_api_key=OPENAI_API_KEY,
             max_tokens=num_outputs,
         ),
     )
 
-    index = GPTSimpleVectorIndex(
-        documents, llm_predictor=llm_predictor, prompt_helper=prompt_helper
+    service_context = ServiceContext.from_defaults(
+        llm_predictor=llm_predictor, prompt_helper=prompt_helper
+    )
+
+    index = GPTSimpleVectorIndex.from_documents(
+        documents, service_context=service_context
     )
     return index
 
@@ -165,5 +176,5 @@ def handle_url(
         response = index.query(prompt + "\n", response_mode=response_mode)
         return response.response.strip()
     except Exception as e:
-        print(e)
-        return None
+        traceback.print_exc()
+        return None if e.args else e.args[0]

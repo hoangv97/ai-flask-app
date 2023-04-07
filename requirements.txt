@@ -1,4 +1,5 @@
 flask
+flask-cors
 newspaper3k
 llama-index
 langchain
@@ -13,3 +14,4 @@ transformers
 sentence_transformers
 huggingface_hub
 configparser
+replicate
