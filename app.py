@@ -5,7 +5,7 @@ from flask import Flask, abort, request
 from flask_cors import CORS
 
 from src.langchain import handle_chat_with_agents
-from src.tools import AVAILABLE_TOOLS
+from src.tools import get_available_tools
 from src.url import handle_url
 from src.utils.telegram import send_telegram_message
 
@@ -53,7 +53,7 @@ def api_url():
 def api_tools():
     check_auth()
 
-    return AVAILABLE_TOOLS
+    return get_available_tools()
 
 
 @app.route("/api/chat", methods=["POST"])

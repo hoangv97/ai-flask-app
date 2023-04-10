@@ -1,11 +1,12 @@
 import os
-from typing import List
+from typing import List, Any
 
 from langchain.agents import Tool, load_tools
 from langchain.chat_models import ChatOpenAI
 from langchain.utilities import PythonREPL
 
 from .replicate import tools as replicate_tools
+from ..utils.notion import query_database
 
 # Custom tools
 python_repl_util = PythonREPL()
@@ -82,9 +83,34 @@ DEFAULT_TOOL_NAMES = [tool["name"] for tool in DEFAULT_TOOLS]
 
 CUSTOM_TOOLS = [chat_gpt, python_repl] + replicate_tools
 
-AVAILABLE_TOOLS = [
-    dict(name=tool.name, description=tool.description) for tool in CUSTOM_TOOLS
-] + DEFAULT_TOOLS
+
+def get_notion_tools() -> dict:
+    result = query_database(database_id=os.getenv("PLUGINS_NOTION_DATABASE_ID"))
+    tools_dict = {}
+    for row in result["results"]:
+        name = row["properties"]["Name"]["title"][0]["plain_text"]
+        description = row["properties"]["Description"]["rich_text"][0]["plain_text"]
+        tools_dict[name] = {
+            "description": description,
+        }
+
+    return tools_dict
+
+
+def get_available_tools() -> List[dict]:
+    tools_dict = get_notion_tools()
+    tools = [
+        dict(
+            name=tool.name,
+            description=tool.description
+            if tool.name not in tools_dict
+            else tools_dict[tool.name]["description"],
+        )
+        for tool in CUSTOM_TOOLS
+    ] + DEFAULT_TOOLS
+    # sort tools by name
+    tools = sorted(tools, key=lambda tool: tool["name"])
+    return tools
 
 
 def load_default_tools(tool_names: List[str], llm: any):
@@ -112,15 +138,23 @@ def get_tools(tool_names: List[str], llm: any):
 
     default_tool_names = []
 
+    tools_dict = get_notion_tools()
+
     for tool_name in tool_names:
         if tool_name in DEFAULT_TOOL_NAMES:
             default_tool_names.append(tool_name)
         else:
             for custom_tool in CUSTOM_TOOLS:
                 if tool_name == custom_tool.name:
+                    if tool_name in tools_dict:
+                        custom_tool.description = tools_dict[tool_name]["description"]
                     tools.append(custom_tool)
 
     if default_tool_names:
-        tools += load_default_tools(default_tool_names, llm)
+        default_tools = load_default_tools(default_tool_names, llm)
+        for tool in default_tools:
+            if tool.name in tools_dict:
+                tool.description = tools_dict[tool.name]["description"]
+            tools.append(tool)
 
     return tools
