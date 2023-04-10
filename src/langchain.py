@@ -50,7 +50,7 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         # Set the agent_scratchpad variable to that value
         kwargs["agent_scratchpad"] = thoughts
         if self.thoughts_cb:
-            self.thoughts_cb(latest_thoughts)
+            self.thoughts_cb(latest_thoughts.strip())
 
         # Create a tools variable from the list of tools provided
         kwargs["tools"] = "\n".join(
