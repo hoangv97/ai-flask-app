@@ -42,13 +42,15 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         # Format them in a particular way
         intermediate_steps = kwargs.pop("intermediate_steps")
         thoughts = ""
+        latest_thoughts = ""
         for action, observation in intermediate_steps:
             thoughts += action.log
-            thoughts += f"\nObservation: {observation}\nThought: "
+            latest_thoughts = f"\nObservation: {observation}\nThought: "
+            thoughts += latest_thoughts
         # Set the agent_scratchpad variable to that value
         kwargs["agent_scratchpad"] = thoughts
         if self.thoughts_cb:
-            self.thoughts_cb(thoughts)
+            self.thoughts_cb(latest_thoughts)
 
         # Create a tools variable from the list of tools provided
         kwargs["tools"] = "\n".join(
