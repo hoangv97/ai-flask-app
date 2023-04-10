@@ -1,6 +1,11 @@
 import os
 
 
+class SafeDict(dict):
+    def __missing__(self, key):
+        return "{" + key + "}"
+
+
 def is_dev_mode():
     return os.getenv("DEV_MODE", "false").lower() == "true"
 

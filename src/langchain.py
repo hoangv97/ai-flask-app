@@ -16,7 +16,7 @@ from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
 
 from .tools import get_tools
-from .utils.helper import encode_protected_output, is_dev_mode
+from .utils.helper import encode_protected_output, is_dev_mode, SafeDict
 
 
 # Set up a prompt template
@@ -93,11 +93,12 @@ def handle_chat_with_agents(
     prompt: str,
     chat_history: List[str],
     tool_names: List[str],
+    actor: str = "assistant",
     thoughts_cb: Any = None,
 ):
     try:
         # Set up the base template
-        template = """Act as an assistant and have a conversation with a human. Answer the following questions as best you can. You have access to the following tools:
+        template = """Act as a {actor} and have a conversation with a human. Answer the following questions as best you can. You have access to the following tools:
 
 {tools}
 
@@ -112,11 +113,13 @@ Observation: the result of the action
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
-Begin! If you are sure you have the final answer or no action needed, respond "Final Answer: <answer>". If you are not sure, you can continue to use the tools.
+Begin! Remember to speak as a {actor} when giving your final answer. If you are sure you have the final answer or no action needed, respond "Final Answer: <answer>". If you are not sure, you can continue to use the tools.
 
 {chat_history}
 Question: {input}
-{agent_scratchpad}"""
+{agent_scratchpad}""".format_map(
+            SafeDict(actor=actor)
+        )
 
         llm = ChatOpenAI(temperature=0)
 

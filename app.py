@@ -73,6 +73,7 @@ def api_chat():
         )
     tool_names = tool_names.split(",")
 
+    actor = request.json.get("actor", "assistant")
     chat_history = request.json.get("h", [])
 
     def thoughts_cb(thoughts):
@@ -88,6 +89,7 @@ def api_chat():
         prompt,
         chat_history,
         tool_names,
+        actor=actor,
         thoughts_cb=thoughts_cb,
     )
     return result
