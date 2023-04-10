@@ -1,5 +1,10 @@
 import os
 
+
+def is_dev_mode():
+    return os.getenv("DEV_MODE", "false").lower() == "true"
+
+
 protected_data = os.getenv("PROTECTED_DATA", "").split(",")
 
 

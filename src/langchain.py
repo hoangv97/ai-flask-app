@@ -16,7 +16,7 @@ from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
 
 from .tools import get_tools
-from .utils.helper import encode_protected_output
+from .utils.helper import encode_protected_output, is_dev_mode
 
 
 # Set up a prompt template
@@ -151,7 +151,7 @@ Question: {input}
             tools=tools,
             max_iterations=15,
             return_intermediate_steps=True,
-            verbose=True,
+            verbose=is_dev_mode(),
         )
 
         result = agent_executor({"input": encode_protected_output(prompt)})
