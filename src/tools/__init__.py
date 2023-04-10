@@ -1,8 +1,11 @@
-from langchain.utilities import PythonREPL
-from langchain.agents import Tool, load_tools
-from .replicate import tools as replicate_tools
-from typing import List
 import os
+from typing import List
+
+from langchain.agents import Tool, load_tools
+from langchain.chat_models import ChatOpenAI
+from langchain.utilities import PythonREPL
+
+from .replicate import tools as replicate_tools
 
 # Custom tools
 python_repl_util = PythonREPL()
@@ -10,6 +13,24 @@ python_repl = Tool(
     name="python-repl",
     func=python_repl_util.run,
     description="A Python shell. Use this to execute python commands. Input should be a valid python command. If you expect output it should be printed out.",
+)
+
+
+def run_chat_gpt(input: str) -> str:
+    llm = ChatOpenAI(temperature=1)
+    result = llm.completion_with_retry(
+        messages=[{"role": "user", "content": input}],
+        model="gpt-3.5-turbo",
+    )
+    response = result.choices[0].message.content
+    return response
+
+
+chat_gpt = Tool(
+    name="chat-gpt",
+    func=run_chat_gpt,
+    description="A chatbot. Use this to chat with a chatbot. Input should be a message to send to the chatbot.",
+    return_direct=True,
 )
 
 # Link: https://python.langchain.com/en/latest/modules/agents/tools/getting_started.html
@@ -33,7 +54,7 @@ DEFAULT_TOOLS = [
     ),
     dict(
         name="open-meteo-api",
-        description="Useful for when you want to get weather information from the OpenMeteo API. The input should be a question in natural language that this API can answer.",
+        description="Useful for when you want to get current weather information. The input should be a question in natural language that this API can answer.",
     ),
     dict(
         name="news-api",
@@ -59,11 +80,31 @@ DEFAULT_TOOLS = [
 
 DEFAULT_TOOL_NAMES = [tool["name"] for tool in DEFAULT_TOOLS]
 
-CUSTOM_TOOLS = [python_repl] + replicate_tools
+CUSTOM_TOOLS = [chat_gpt, python_repl] + replicate_tools
 
-AVAILABLE_TOOLS = DEFAULT_TOOLS + [
+AVAILABLE_TOOLS = [
     dict(name=tool.name, description=tool.description) for tool in CUSTOM_TOOLS
-]
+] + DEFAULT_TOOLS
+
+
+def load_default_tools(tool_names: List[str], llm: any):
+    default_tools = load_tools(
+        tool_names,
+        llm=llm,
+        news_api_key=os.getenv("NEWS_API_KEY"),
+        listen_api_key=os.getenv("LISTEN_API_KEY"),
+        tmdb_bearer_token=os.getenv("TMDB_BEARER_TOKEN"),
+    )
+    tools = []
+    for tool in default_tools:
+        tools.append(
+            Tool(
+                name=tool.name,
+                func=tool.run,
+                description=tool.description,
+            )
+        )
+    return tools
 
 
 def get_tools(tool_names: List[str], llm: any):
@@ -80,12 +121,6 @@ def get_tools(tool_names: List[str], llm: any):
                     tools.append(custom_tool)
 
     if default_tool_names:
-        tools += load_tools(
-            default_tool_names,
-            llm=llm,
-            news_api_key=os.getenv("NEWS_API_KEY"),
-            listen_api_key=os.getenv("LISTEN_API_KEY"),
-            tmdb_bearer_token=os.getenv("TMDB_BEARER_TOKEN"),
-        )
+        tools += load_default_tools(default_tool_names, llm)
 
     return tools

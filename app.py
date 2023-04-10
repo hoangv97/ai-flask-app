@@ -4,9 +4,10 @@ from dotenv import load_dotenv
 from flask import Flask, abort, request
 from flask_cors import CORS
 
-from src.langchain import handle_prompt
+from src.langchain import handle_chat_with_agents
 from src.tools import AVAILABLE_TOOLS
 from src.url import handle_url
+from src.utils.telegram import send_telegram_message
 
 load_dotenv()
 
@@ -55,8 +56,8 @@ def api_tools():
     return AVAILABLE_TOOLS
 
 
-@app.route("/api/ask", methods=["POST", "GET"])
-def api_ask():
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
     check_auth()
     prompt = request.args.get("p", None)
     if not prompt:
@@ -64,13 +65,29 @@ def api_ask():
     if not prompt:
         return "Prompt is missing!", 400
 
-    tools = request.args.get("t", "")
-    if not tools:
+    tool_names = request.args.get("t", "")
+    if not tool_names:
         return (
             "Tools is missing! Available tools: /api/tools",
             400,
         )
-    tools = tools.split(",")
+    tool_names = tool_names.split(",")
 
-    result = handle_prompt(prompt, tools)
+    chat_history = request.json.get("h", [])
+
+    def thoughts_cb(thoughts):
+        telegram = request.json.get("telegram", None)
+        if telegram:
+            send_telegram_message(
+                bot_id=telegram["bot_id"],
+                chat_id=telegram["chat_id"],
+                message="""```\n{}```""".format(thoughts),
+            )
+
+    result = handle_chat_with_agents(
+        prompt,
+        chat_history,
+        tool_names,
+        thoughts_cb=thoughts_cb,
+    )
     return result
