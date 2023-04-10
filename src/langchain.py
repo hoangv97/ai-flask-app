@@ -45,8 +45,8 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         latest_thoughts = ""
         for action, observation in intermediate_steps:
             thoughts += action.log
-            latest_thoughts = f"\nObservation: {observation}\nThought: "
-            thoughts += latest_thoughts
+            thoughts += f"\nObservation: {observation}\nThought: "
+            latest_thoughts = f"{action.log}\n\nObservation: {observation}"
         # Set the agent_scratchpad variable to that value
         kwargs["agent_scratchpad"] = thoughts
         if self.thoughts_cb:
