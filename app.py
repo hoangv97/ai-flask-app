@@ -4,9 +4,11 @@ from dotenv import load_dotenv
 from flask import Flask, abort, request
 from flask_cors import CORS
 
+from src.cohere import summarize as summarize_cohere
+from src.hugging_face import summarize as summarize_hugging_face
 from src.langchain import handle_chat_with_agents
+from src.llama_index import handle_url
 from src.tools import get_available_tools
-from src.url import handle_url
 from src.utils.telegram import send_telegram_message
 
 load_dotenv()
@@ -93,3 +95,43 @@ def api_chat():
         thoughts_cb=thoughts_cb,
     )
     return result
+
+
+@app.route("/api/summarize", methods=["POST", "GET"])
+def api_summarize():
+    check_auth()
+
+    model = request.args.get("model", None)
+
+    text = request.json.get("text", None)
+    if not text:
+        return "Text is missing!", 400
+
+    result = None
+
+    if model in ["hugging_face", "hf"]:
+        min_length = request.json.get("min_length", 30)
+        max_length = request.json.get("max_length", 130)
+
+        result = summarize_hugging_face(
+            text,
+            min_length=min_length,
+            max_length=max_length,
+        )
+    else:
+        temperature = request.json.get("temperature", 0.5)
+        length = request.json.get("length", "medium")
+        format = request.json.get("format", "paragraph")
+
+        result = summarize_cohere(
+            text,
+            temperature=float(temperature),
+            length=length,
+            format=format,
+        )
+    if not result:
+        return "Error when processing!", 500
+
+    return {
+        "result": result,
+    }

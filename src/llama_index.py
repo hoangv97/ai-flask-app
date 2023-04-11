@@ -1,8 +1,12 @@
 import os
-from typing import List, Literal
+import re
 import traceback
+from typing import List, Literal
 
 import requests
+from newspaper import Article
+from youtube_transcript_api import YouTubeTranscriptApi
+
 from langchain import OpenAI
 from langchain.chat_models import ChatOpenAI
 from llama_index import (
@@ -13,45 +17,26 @@ from llama_index import (
     PromptHelper,
     ServiceContext,
 )
-from newspaper import Article
+from llama_index.readers.schema.base import Document
+from .utils.notion import query_database, create_page
 
-from .youtube import get_documents as get_youtube_documents
-from .youtube import get_youtube_video_id
 
 NOTION_API_KEY = os.getenv("NOTION_API_KEY")
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-NOTION_HEADERS = {
-    "accept": "application/json",
-    "Notion-Version": "2022-06-28",
-    "content-type": "application/json",
-    "Authorization": "Bearer {}".format(NOTION_API_KEY),
-}
-
-notion_database_id = "db0f27fb136943e3b141b1208b65580b"
+notion_database_id = os.getenv("URL_NOTION_DATABASE_ID")
 
 
 def get_notion_item(url: str):
-    notion_url = "https://api.notion.com/v1/databases/{}/query".format(
-        notion_database_id
-    )
+    filter_db = {"and": [{"property": "URL", "url": {"equals": url}}]}
 
-    payload = {
-        "filter": {"and": [{"property": "URL", "url": {"equals": url}}]},
-        "page_size": 100,
-    }
-
-    response = requests.post(notion_url, json=payload, headers=NOTION_HEADERS)
-
-    result = response.json()
+    result = query_database(notion_database_id, filter_db)
 
     return None if not result["results"] else result["results"][0]
 
 
 def create_notion_item(article: Article):
-    url = "https://api.notion.com/v1/pages"
-
     def text_to_blocks():
         lines = article.text.split("\n")
         blocks = []
@@ -77,17 +62,14 @@ def create_notion_item(article: Article):
 
         return blocks
 
-    payload = {
-        "parent": {"database_id": notion_database_id},
-        "properties": {
+    result = create_page(
+        parent={"database_id": notion_database_id},
+        properties={
             "Title": {"title": [{"text": {"content": article.title}}]},
             "URL": {"url": article.url},
         },
-        "children": text_to_blocks(),
-    }
-
-    response = requests.post(url, json=payload, headers=NOTION_HEADERS)
-    result = response.json()
+        children=text_to_blocks(),
+    )
     return result
 
 
@@ -154,7 +136,7 @@ def handle_url(
     try:
         video_id = get_youtube_video_id(url)
         if video_id:
-            documents = get_youtube_documents(ids=[video_id], languages=["en", "vi"])
+            documents = get_documents(ids=[video_id], languages=["en", "vi"])
 
         else:
             # normal URL
@@ -178,3 +160,26 @@ def handle_url(
     except Exception as e:
         traceback.print_exc()
         return None if e.args else e.args[0]
+
+
+def get_youtube_video_id(url: str):
+    # Regular expression to match YouTube video URLs
+    regex = r"(?:https?:\/\/)?(?:[0-9A-Z-]+\.)?(?:youtube|youtu|youtube-nocookie)\.(?:com|be)\/(?:watch\?v=|watch\?.+&v=|embed\/|v\/|.+\?v=)?([^&=\n%\?]{11})"
+
+    match = re.match(regex, url, re.IGNORECASE)
+    if match:
+        return match.group(1) or match.group(2) or match.group(3)
+
+    # If the URL is not a YouTube video, return None
+    return None
+
+
+def get_documents(ids: List[str], languages: List[str]):
+    results = []
+    for id in ids:
+        srt = YouTubeTranscriptApi.get_transcript(id, languages=languages)
+        transcript = ""
+        for chunk in srt:
+            transcript = transcript + chunk["text"] + "\n"
+        results.append(Document(transcript))
+    return results
