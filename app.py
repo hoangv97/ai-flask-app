@@ -76,6 +76,7 @@ def api_chat():
     tool_names = tool_names.split(",")
 
     actor = request.json.get("actor", "assistant")
+    max_iterations = request.json.get("max_iterations", 5)
     chat_history = request.json.get("h", [])
 
     def thoughts_cb(thoughts):
@@ -92,6 +93,7 @@ def api_chat():
         chat_history,
         tool_names,
         actor=actor,
+        max_iterations=max_iterations,
         thoughts_cb=thoughts_cb,
     )
     return result

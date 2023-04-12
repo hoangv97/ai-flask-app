@@ -4,7 +4,7 @@ from typing import Literal
 
 from langchain.agents import tool
 import replicate
-from ..utils.helper import decode_protected_output
+from ..utils.helper import decode_protected_output, parse_json_string
 
 Output_Type = Literal[
     "image",
@@ -21,15 +21,7 @@ def get_prediction(
     try:
         query = decode_protected_output(query)
 
-        # normalize query string
-        if query.startswith("```"):
-            if query.startswith("```json"):
-                query = query.replace("```json", "")
-            query = query.replace("```", "")
-        query = query.strip()
-
-        input = json.loads(query)
-        print(input)
+        input = parse_json_string(query)
 
         model = replicate.models.get(model_name)
         version = model.versions.get(model_version)
@@ -43,7 +35,8 @@ def get_prediction(
 
         return {
             "success": True,
-            "prediction": prediction,
+            "replicate": prediction,
+            "input": input,
             "model": {
                 "name": model_name,
                 "version": model_version,
@@ -76,7 +69,7 @@ def stable_diffusion(query: str):
     return_direct=True,
 )
 def openjourney(query: str):
-    """useful for when you need to create an image or imagine something. The input of this tool in json format only with prompt key as description of the image, num_outputs key as number of result in integer."""
+    """Only useful for when you are asked to create an image, if you are not, don't use this tool. The input of this tool in json format only with prompt key as detailed description of the image, num_outputs key as number of result in integer."""
     return get_prediction(
         model_name="prompthero/openjourney",
         model_version="9936c2001faa2194a261c01381f90e65261879985476014a0a37a334593a05eb",

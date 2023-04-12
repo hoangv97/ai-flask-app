@@ -16,3 +16,5 @@ huggingface_hub
 configparser
 replicate
 cohere
+pydantic
+giphy_client

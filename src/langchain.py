@@ -1,5 +1,6 @@
 import re
 import traceback
+from datetime import datetime
 from typing import Any, Dict, List, Union
 
 from langchain.agents import (
@@ -16,7 +17,7 @@ from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
 
 from .tools import get_tools
-from .utils.helper import encode_protected_output, is_dev_mode, SafeDict
+from .utils.helper import SafeDict, encode_protected_output, is_dev_mode
 
 
 # Set up a prompt template
@@ -59,7 +60,12 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         # Create a list of tool names for the tools provided
         kwargs["tool_names"] = ", ".join([tool.name for tool in self.tools])
         # Create a chat_history variable from the chat history provided
-        kwargs["chat_history"] = "\n".join(self.chat_history)
+        if self.chat_history:
+            kwargs["chat_history"] = "Previous conversation history:\n" + "\n".join(
+                self.chat_history
+            )
+        else:
+            kwargs["chat_history"] = ""
 
         formatted = self.template.format(**kwargs)
 
@@ -94,11 +100,14 @@ def handle_chat_with_agents(
     chat_history: List[str],
     tool_names: List[str],
     actor: str = "assistant",
+    max_iterations: int = 15,
     thoughts_cb: Any = None,
 ):
     try:
         # Set up the base template
-        template = """Act as a {actor} and have a conversation with a human. Answer the following questions as best you can. You have access to the following tools:
+        template = """Act as a {actor} and have a conversation with a human. Answer the following questions as best you can. 
+
+You have access to the following tools:
 
 {tools}
 
@@ -106,16 +115,17 @@ You must use the following format in every response:
 
 Question: the input question you must answer
 Thought: you should always think about what to do
-Action: the action to take, should be one of [{tool_names}]
+Action: the action to take, only be one of [{tool_names}], don't include other words
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
-Begin! Remember to speak as a {actor} when giving your final answer. If you are sure you have the final answer or no action needed, respond "Final Answer: <answer>". If you are not sure, you can continue to use the tools.
+Begin! Remember to speak as a {actor} when giving your final answer. If you are sure you have the final answer or no action needed, you must respond "Final Answer: <answer>" in question's language in this final answer only. If you are not sure, you can continue to use the tools.
 
 {chat_history}
+
 Question: {input}
 {agent_scratchpad}""".format_map(
             SafeDict(actor=actor)
@@ -154,7 +164,7 @@ Question: {input}
         agent_executor = AgentExecutor.from_agent_and_tools(
             agent=agent,
             tools=tools,
-            max_iterations=15,
+            max_iterations=max_iterations,
             return_intermediate_steps=True,
             verbose=is_dev_mode(),
         )

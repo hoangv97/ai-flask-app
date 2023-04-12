@@ -2,10 +2,10 @@ import os
 from typing import List, Any
 
 from langchain.agents import Tool, load_tools
-from langchain.chat_models import ChatOpenAI
 from langchain.utilities import PythonREPL
 
 from .replicate import tools as replicate_tools
+from .giphy import GiphyAPIWrapper
 from ..utils.notion import query_database
 
 # Custom tools
@@ -16,23 +16,13 @@ python_repl = Tool(
     description="A Python shell. Use this to execute python commands. Input should be a valid python command. If you expect output it should be printed out.",
 )
 
-
-def run_chat_gpt(input: str) -> str:
-    llm = ChatOpenAI(temperature=1)
-    result = llm.completion_with_retry(
-        messages=[{"role": "user", "content": input}],
-        model="gpt-3.5-turbo",
-    )
-    response = result.choices[0].message.content
-    return response
-
-
-chat_gpt = Tool(
-    name="chat-gpt",
-    func=run_chat_gpt,
-    description="A chatbot. Use this to chat with a chatbot. Input should be a message to send to the chatbot.",
+giphy = Tool(
+    name="giphy",
+    func=GiphyAPIWrapper().run,
+    description="useful for when you need to find gif or clips. The input of this tool in json format only with q key as description of the image; limit key as number of result in integer; api_type key as one of these values: search, trending; random key as user requests random results or not in boolean format.",
     return_direct=True,
 )
+
 
 # Link: https://python.langchain.com/en/latest/modules/agents/tools/getting_started.html
 
@@ -81,17 +71,33 @@ DEFAULT_TOOLS = [
 
 DEFAULT_TOOL_NAMES = [tool["name"] for tool in DEFAULT_TOOLS]
 
-CUSTOM_TOOLS = [chat_gpt, python_repl] + replicate_tools
+CUSTOM_TOOLS = [
+    giphy,
+    python_repl,
+] + replicate_tools
 
 
 def get_notion_tools() -> dict:
-    result = query_database(database_id=os.getenv("PLUGINS_NOTION_DATABASE_ID"))
     tools_dict = {}
+
+    database_id = os.getenv("PLUGINS_NOTION_DATABASE_ID", None)
+
+    if not database_id:
+        return tools_dict
+
+    result = query_database(database_id=database_id)
     for row in result["results"]:
         name = row["properties"]["Name"]["title"][0]["plain_text"]
         description = row["properties"]["Description"]["rich_text"][0]["plain_text"]
+        groups = list(
+            map(
+                lambda group: group["name"], row["properties"]["Groups"]["multi_select"]
+            )
+        )
+
         tools_dict[name] = {
             "description": description,
+            "groups": groups,
         }
 
     return tools_dict
@@ -105,9 +111,23 @@ def get_available_tools() -> List[dict]:
             description=tool.description
             if tool.name not in tools_dict
             else tools_dict[tool.name]["description"],
+            groups=[]
+            if tool.name not in tools_dict
+            else tools_dict[tool.name]["groups"],
         )
         for tool in CUSTOM_TOOLS
-    ] + DEFAULT_TOOLS
+    ] + [
+        dict(
+            name=tool["name"],
+            description=tool["description"]
+            if tool["name"] not in tools_dict
+            else tools_dict[tool["name"]]["description"],
+            groups=[]
+            if tool["name"] not in tools_dict
+            else tools_dict[tool["name"]]["groups"],
+        )
+        for tool in DEFAULT_TOOLS
+    ]
     # sort tools by name
     tools = sorted(tools, key=lambda tool: tool["name"])
     return tools
