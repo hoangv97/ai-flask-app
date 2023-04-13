@@ -19,3 +19,4 @@ cohere
 pydantic
 giphy_client
 faiss-cpu
+tiktoken
