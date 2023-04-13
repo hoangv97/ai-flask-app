@@ -68,12 +68,20 @@ def api_chat():
         return "Prompt is missing!", 400
 
     tool_names = request.args.get("t", "")
-    if not tool_names:
-        return (
-            "Tools is missing! Available tools: /api/tools",
-            400,
+    # if not tool_names:
+    #     return (
+    #         "Tools is missing! Available tools: /api/tools",
+    #         400,
+    #     )
+    tool_names = list(
+        filter(
+            lambda tool: tool,
+            map(
+                lambda tool: tool.strip(),
+                tool_names.split(","),
+            ),
         )
-    tool_names = tool_names.split(",")
+    )
 
     actor = request.json.get("actor", "assistant")
     max_iterations = request.json.get("max_iterations", 5)

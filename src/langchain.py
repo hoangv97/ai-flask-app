@@ -1,22 +1,19 @@
 import re
 import traceback
-from datetime import datetime
-from typing import Any, Dict, List, Union
+from typing import Any, List, Union
 
 from langchain.agents import (
     AgentExecutor,
     AgentOutputParser,
-    AgentType,
     LLMSingleActionAgent,
     Tool,
-    initialize_agent,
 )
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
 
-from .tools import get_tools
+from .tools import get_tools, get_tools_by_query
 from .utils.helper import SafeDict, encode_protected_output, is_dev_mode
 
 
@@ -133,7 +130,10 @@ Question: {input}
 
         llm = ChatOpenAI(temperature=0)
 
-        tools = get_tools(tool_names, llm=llm)
+        if not tool_names:
+            tools = get_tools_by_query(prompt, llm=llm)
+        else:
+            tools = get_tools(tool_names, llm=llm)
 
         prompt_template = CustomPromptTemplate(
             chat_history=chat_history,

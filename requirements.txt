@@ -18,3 +18,4 @@ replicate
 cohere
 pydantic
 giphy_client
+faiss-cpu

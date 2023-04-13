@@ -11,6 +11,7 @@ import giphy_client
 from giphy_client.rest import ApiException
 from pydantic import BaseModel, Extra, root_validator
 
+from langchain.agents import Tool
 from langchain.utils import get_from_dict_or_env
 
 from ..utils.helper import parse_json_string, random_number
@@ -114,3 +115,11 @@ class GiphyAPIWrapper(BaseModel):
                 "success": False,
                 "error": e.args,
             }
+
+
+giphy = Tool(
+    name="giphy",
+    func=GiphyAPIWrapper().run,
+    description="useful for when you need to find gif or clips. The input of this tool in json format only with q key as description of the image; limit key as number of result in integer; api_type key as one of these values: search, trending; random key as user requests random results or not in boolean format.",
+    return_direct=True,
+)
