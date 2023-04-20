@@ -93,6 +93,20 @@ def blip_2(query: str):
 
 
 @tool(
+    "img2prompt",
+    return_direct=True,
+)
+def img2prompt(query: str):
+    """useful for when you need to get text prompt about an image URL. The input of this tool in json format only with image key as image's URL only."""
+    return create_prediction(
+        model_name="methexis-inc/img2prompt",
+        model_version="50adaf2d3ad20a6f911a8a9e3ccf777b263b8596fbd2c8fc26e8888f8a0edbb5",
+        query=query,
+        output_type="text",
+    )
+
+
+@tool(
     "controlnet-hough",
     return_direct=True,
 )
@@ -165,6 +179,7 @@ def audio_ldm(query: str):
 tools = [
     stable_diffusion,
     blip_2,
+    img2prompt,
     controlnet_hough,
     openjourney,
     controlnet_scribble,
