@@ -178,10 +178,10 @@ def audio_ldm(query: str):
 
 tools = [
     stable_diffusion,
+    openjourney,
     blip_2,
     img2prompt,
     controlnet_hough,
-    openjourney,
     controlnet_scribble,
     instruct_pix2pix,
     codeformer,
