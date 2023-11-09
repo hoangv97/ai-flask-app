@@ -20,3 +20,5 @@ pydantic
 giphy_client
 faiss-cpu
 tiktoken
+arxiv
+duckduckgo-search
